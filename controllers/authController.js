@@ -69,17 +69,58 @@ exports.login = async (req, res) => {
     }
 };
 
+// exports.verifyOTP = async (req, res) => {
+//     try {
+//         const { email, otp } = req.body;
+//         const validOTP = await OTP.findOne({ email, otp, action: 'account_verification' });
+
+//         if (!validOTP) {
+//             return res.status(400).json({ message: 'Invalid or expired OTP' });
+//         }
+
+//         const user = await User.findOneAndUpdate({ email }, { isVerified: true }, { new: true });
+//         await OTP.deleteOne({ _id: validOTP._id }); // Delete OTP after usage
+
+//         res.json({
+//             _id: user.id,
+//             name: user.name,
+//             email: user.email,
+//             role: user.role,
+//             token: generateToken(user.id, user.role)
+//         });
+//     } catch (error) {
+//         res.status(500).json({ message: 'Server Error' });
+//     }
+// };
+
+
 exports.verifyOTP = async (req, res) => {
     try {
         const { email, otp } = req.body;
-        const validOTP = await OTP.findOne({ email, otp, action: 'account_verification' });
+
+        console.log("VERIFY OTP REQUEST:", email, otp);
+
+        const validOTP = await OTP.findOne({ 
+            email, 
+            otp, 
+            action: 'account_verification' 
+        });
+
+        console.log("OTP FOUND:", validOTP);
 
         if (!validOTP) {
             return res.status(400).json({ message: 'Invalid or expired OTP' });
         }
 
-        const user = await User.findOneAndUpdate({ email }, { isVerified: true }, { new: true });
-        await OTP.deleteOne({ _id: validOTP._id }); // Delete OTP after usage
+        const user = await User.findOneAndUpdate(
+            { email },
+            { isVerified: true },
+            { new: true }
+        );
+
+        console.log("UPDATED USER:", user);
+
+        await OTP.deleteOne({ _id: validOTP._id });
 
         res.json({
             _id: user.id,
@@ -88,7 +129,9 @@ exports.verifyOTP = async (req, res) => {
             role: user.role,
             token: generateToken(user.id, user.role)
         });
+
     } catch (error) {
+        console.log(error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
