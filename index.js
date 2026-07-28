@@ -14,7 +14,7 @@
     app.use(cors( {
         origin: [
       "http://localhost:5173",
-      "https://elite-tickets-frontend.vercel.app/api",
+      "https://elite-tickets-frontend.vercel.app",
     ],
     // credentials: true,
     }));
