@@ -14,13 +14,19 @@
     app.use(cors( {
         origin: [
       "http://localhost:5173",
-      "https://elite-tickets-frontend.vercel.app/",
+      "https://elite-tickets-frontend.vercel.app",
     ],
-    credentials: true,
+    // credentials: true,
     }));
     app.use(express.json());
 
-
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "EliteTickets Backend API is running",
+    version: "1.0.0",
+  });
+});
 
     
     //Routes
