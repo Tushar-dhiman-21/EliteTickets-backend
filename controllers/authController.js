@@ -11,37 +11,89 @@ const generateOTP = () => {
 const generateToken = (id, role) => {
     return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
-
 exports.register = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
-        let user = await User.findOne({ email });
-        if (user) return res.status(400).json({ message: 'User already exists' });
+        const { name, email, password } = req.body;
 
-        const salt = await bcrypt.genSalt(10);
+        // Check if user already exists
+        let user = await User.findOne({ email });
+
+        if (user) {
+            if (user.isVerified) {
+                return res.status(400).json({
+                    message: "User already exists"
+                });
+            }
+
+            // Remove old unverified account
+            await User.deleteOne({ _id: user._id });
+            await OTP.deleteMany({
+                email,
+                action: "account_verification"
+            });
+        }
+
+        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Create user
         user = await User.create({
             name,
             email,
             password: hashedPassword,
-            role: 'user', // Hardcoded to prevent frontend passing role
+            role: "user",
             isVerified: false
         });
 
-        const otp = generateOTP();
-        await OTP.create({ email, otp, action: 'account_verification' });
-        await sendOTPEmail(email, otp, 'account_verification');
+        try {
+            // Remove previous OTP
+            await OTP.deleteMany({
+                email,
+                action: "account_verification"
+            });
 
-        res.status(201).json({
-            message: 'OTP sent to email. Please verify.',
-            email: user.email
-        });
+            // Generate OTP
+            const otp = generateOTP();
+
+            // Save OTP
+            await OTP.create({
+                email,
+                otp,
+                action: "account_verification"
+            });
+
+            // Send Email
+            await sendOTPEmail(email, otp, "account_verification");
+
+            return res.status(201).json({
+                message: "OTP sent successfully.",
+                email
+            });
+
+        } catch (emailError) {
+
+            // Rollback if email sending fails
+            await User.deleteOne({ _id: user._id });
+
+            await OTP.deleteMany({
+                email,
+                action: "account_verification"
+            });
+
+            return res.status(500).json({
+                message: "Failed to send OTP. Please try again."
+            });
+        }
+
     } catch (error) {
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        console.log(error);
+
+        return res.status(500).json({
+            message: "Server Error",
+            error: error.message
+        });
     }
 };
-
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;

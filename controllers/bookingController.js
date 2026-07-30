@@ -52,34 +52,75 @@ exports.bookEvent = async (req, res) => {
     }
 };
 
-exports.confirmBooking = async (req, res) => {
-    try {
-        const { paymentStatus } = req.body; // 'paid' or 'not_paid'
-        const booking = await Booking.findById(req.params.id).populate('userId').populate('eventId');
-        if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
-        if (booking.status === 'confirmed') return res.status(400).json({ message: 'Booking is already confirmed' });
+exports.updateBookingStatus = async (req, res) => {
+    try {
+        const { status, paymentStatus } = req.body;
+
+        const booking = await Booking.findById(req.params.id)
+            .populate("userId")
+            .populate("eventId");
+
+        if (!booking) {
+            return res.status(404).json({
+                message: "Booking not found"
+            });
+        }
 
         const event = await Event.findById(booking.eventId._id);
-        if (event.availableSeats <= 0) {
-            return res.status(400).json({ message: 'No seats available to confirm this booking' });
+
+        if (!event) {
+            return res.status(404).json({
+                message: "Event not found"
+            });
         }
 
-        booking.status = 'confirmed';
-        if (paymentStatus) {
+        // Restore seat if changing from confirmed
+        if (booking.status === "confirmed" && status !== "confirmed") {
+            event.availableSeats += 1;
+        }
+
+        // Confirm booking
+        if (booking.status !== "confirmed" && status === "confirmed") {
+
+            if (event.availableSeats <= 0) {
+                return res.status(400).json({
+                    message: "No seats available"
+                });
+            }
+
+            event.availableSeats -= 1;
+
+            // Send email ONLY when payment is paid
+            if (paymentStatus === "paid") {
+                await sendBookingEmail(
+                    booking.userId.email,
+                    booking.userId.name,
+                    booking.eventId.title
+                );
+            }
+        }
+
+        booking.status = status;
+
+        if (paymentStatus !== undefined) {
             booking.paymentStatus = paymentStatus;
         }
-        await booking.save();
 
-        event.availableSeats -= 1;
+        await booking.save();
         await event.save();
 
-        // Send email on admin confirmation
-        await sendBookingEmail(booking.userId.email, booking.userId.name, booking.eventId.title);
+        res.json({
+            message: "Booking updated successfully",
+            booking
+        });
 
-        res.json({ message: 'Booking confirmed successfully', booking });
     } catch (error) {
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        console.log(error); 
+        res.status(500).json({
+            message: "Server Error",
+            error: error.message
+        });
     }
 };
 

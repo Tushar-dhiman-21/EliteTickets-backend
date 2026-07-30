@@ -1,21 +1,18 @@
-const express = require("express");
-const mongoose = require("mongoose");
 const cors = require("cors");
+const express = require("express");
 const dotenv = require("dotenv");
-
-dotenv.config();
+const mongoose = require("mongoose");
 
 const authRoutes = require("./routes/auth");
 const eventRoutes = require("./routes/events");
 const bookingRoutes = require("./routes/bookings");
 
+dotenv.config();
+
 const app = express();
 
 app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "https://elite-tickets-frontend.vercel.app",
-  ],
+  origin: "http://localhost:5173",
 }));
 
 app.use(express.json());
@@ -27,13 +24,17 @@ app.get("/", (req, res) => {
   });
 });
 
+app.use("/api/auth", authRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/bookings", bookingRoutes);
+
 mongoose
   .connect(process.env.MONGO_URL)
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("MongoDB Connection Error:", err));
 
-app.use("/api/auth", authRoutes);
-app.use("/api/events", eventRoutes);
-app.use("/api/bookings", bookingRoutes);
+const PORT = process.env.PORT || 6900;
 
-module.exports = app;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
