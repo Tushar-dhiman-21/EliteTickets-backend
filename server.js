@@ -14,7 +14,7 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:5173",
-     "https://elite-tickets-frontend.vercel.app"     // replace with frontend url
+     "https://elite-tickets-frontend.vercel.app/"     // replace with frontend url
   ]
   
 }));
