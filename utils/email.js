@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const dotenv = require('dotenv');
+const generateTicket = require("./generateTicket");
 
 dotenv.config();
 
@@ -11,25 +12,46 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-const sendBookingEmail = async (userEmail, userName, eventTitle) => {
+const sendBookingEmail = async (booking) => {
     try {
+        console.log("Inside sendBookingEmail");
+
+        const userEmail = booking.userId.email;
+        const userName = booking.userId.name;
+        const eventTitle = booking.eventId.title;
+
+        const pdfBuffer = await generateTicket(booking);
+
+require("fs").writeFileSync("/tmp/test.pdf", pdfBuffer);
+console.log("PDF written successfully");
+        console.log("Is Buffer:", Buffer.isBuffer(pdfBuffer));
+        console.log("PDF Size:", pdfBuffer.length);
+
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: userEmail,
             subject: `Booking Confirmed: ${eventTitle}`,
             html: `
-        <h2>Hi ${userName}!</h2>
-        <p>Your booking for the event <strong>${eventTitle}</strong> is successfully confirmed.</p>
-        <p>Thank you for choosing EliteTickets.</p>
-      `
+                <h2>Hi ${userName}!</h2>
+                <p>Your booking for <strong>${eventTitle}</strong> is confirmed.</p>
+            `,
+            attachments: [
+                {
+                    filename: "EliteTicket.pdf",
+                    content: pdfBuffer,
+                    contentType: "application/pdf"
+                }
+            ]
         };
-        await transporter.sendMail(mailOptions);
-        console.log('Email sent successfully to', userEmail);
+
+        const info = await transporter.sendMail(mailOptions);
+
+        console.log("Mail sent:", info);
+
     } catch (error) {
-        console.error('Error sending email:', error);
+        console.error("FULL ERROR:", error);
     }
 };
-
 const sendOTPEmail = async (userEmail, otp, type) => {
     try {
         const title = type === 'account_verification' ? 'Verify your EliteTickets Account' : 'EliteTickets Booking Verification';
@@ -56,7 +78,7 @@ const sendOTPEmail = async (userEmail, otp, type) => {
         console.log(`OTP sent to ${userEmail} for ${type}`);
     } catch (error) {
         console.error('Error sending OTP email:', error);
-           throw error;
+        throw error;
     }
 };
 

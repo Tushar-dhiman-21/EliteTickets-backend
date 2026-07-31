@@ -2,6 +2,7 @@ const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const OTP = require('../models/OTP');
 const { sendBookingEmail, sendOTPEmail } = require('../utils/email');
+const generateTicket = require('../utils/generateTicket');
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -52,10 +53,12 @@ exports.bookEvent = async (req, res) => {
     }
 };
 
-
 exports.updateBookingStatus = async (req, res) => {
     try {
         const { status, paymentStatus } = req.body;
+
+        console.log("Status:", status);
+        console.log("Payment Status:", paymentStatus);
 
         const booking = await Booking.findById(req.params.id)
             .populate("userId")
@@ -90,17 +93,9 @@ exports.updateBookingStatus = async (req, res) => {
             }
 
             event.availableSeats -= 1;
-
-            // Send email ONLY when payment is paid
-            if (paymentStatus === "paid") {
-                await sendBookingEmail(
-                    booking.userId.email,
-                    booking.userId.name,
-                    booking.eventId.title
-                );
-            }
         }
 
+        // Update booking
         booking.status = status;
 
         if (paymentStatus !== undefined) {
@@ -110,20 +105,25 @@ exports.updateBookingStatus = async (req, res) => {
         await booking.save();
         await event.save();
 
+        // Send email AFTER saving the updated booking
+        if (booking.status === "confirmed" && booking.paymentStatus === "paid") {
+            console.log("Calling sendBookingEmail...");
+            await sendBookingEmail(booking);
+        }
+
         res.json({
             message: "Booking updated successfully",
             booking
         });
 
     } catch (error) {
-        console.log(error); 
+        console.error(error);
         res.status(500).json({
             message: "Server Error",
             error: error.message
         });
     }
-};
-
+};  
 exports.getMyBookings = async (req, res) => {
     try {
         const bookings = req.user.role === 'admin'
