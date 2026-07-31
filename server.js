@@ -12,7 +12,11 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: [
+    "http://localhost:5173",
+     "https://elite-tickets-frontend.vercel.app"     // replace with frontend url
+  ]
+  
 }));
 
 app.use(express.json());
