@@ -163,3 +163,58 @@ exports.cancelBooking = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
+exports.submitPayment = async (req, res) => {
+  try {
+    const { transactionId } = req.body;
+
+    if (!transactionId) {
+      return res.status(400).json({
+        message: "Transaction ID is required",
+      });
+    }
+
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({
+        message: "Booking not found",
+      });
+    }
+
+    // Only booking owner can submit payment
+    if (booking.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        message: "Unauthorized",
+      });
+    }
+
+    // Prevent duplicate submissions
+    if (booking.paymentStatus === "paid") {
+      return res.status(400).json({
+        message: "Payment has already been verified.",
+      });
+    }
+
+    if (booking.paymentStatus === "verification_pending") {
+      return res.status(400).json({
+        message: "Payment verification is already pending.",
+      });
+    }
+
+    // Update payment details
+    booking.transactionId = transactionId;
+    booking.paymentStatus = "verification_pending";
+
+    await booking.save();
+
+    res.status(200).json({
+      message: "Payment submitted successfully. Waiting for admin verification.",
+      booking,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
