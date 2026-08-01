@@ -36,7 +36,7 @@ const generateTicket = (booking) => {
         doc.roundedRect(20, 20, 680, 280, 18)
             .fill("#FFFFFF");
 
-        // Right VIP Section
+        // Right  Section
         doc.rect(540, 20, 160, 280)
             .fill("#1E293B");
 
@@ -197,14 +197,14 @@ const generateTicket = (booking) => {
                 align: "center"
             });
 
-        // VIP Badge
+        //  Badge
         doc.roundedRect(570, 105, 100, 28, 14)
             .fill("#FBBF24");
 
         doc.fillColor("#1E293B")
             .font("Helvetica-Bold")
             .fontSize(12)
-            .text("VIP PASS", 570, 113, {
+            .text(" PASS", 570, 113, {
                 width: 100,
                 align: "center"
             });
