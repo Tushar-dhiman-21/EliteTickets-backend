@@ -1,10 +1,11 @@
 const PDFDocument = require("pdfkit");
+const QRCode = require("qrcode");
 
 const generateTicket = (booking) => {
     return new Promise((resolve, reject) => {
 
         const doc = new PDFDocument({
-            size: [500, 650],
+            size: [720, 320],
             margin: 0
         });
 
@@ -17,38 +18,228 @@ const generateTicket = (booking) => {
         });
 
         // Background
-        doc.rect(0, 0, 500, 700).fill("#F5F7FB");
+        doc.rect(0, 0, 720, 320)
+            .fill("#F4F6FB");
 
 
-        // ================= HEADER =================
+        // Main Ticket
+        doc.roundedRect(20, 20, 680, 280, 18)
+            .fill("#FFFFFF");
 
-doc.roundedRect(20, 20, 460, 120, 20)
-    .fill("#312E81");
+        // Right VIP Section
+        doc.rect(540, 20, 160, 280)
+            .fill("#111827");
 
-// Brand
-doc.fillColor("white")
-    .font("Helvetica-Bold")
-    .fontSize(28)
-    .text("ELITETICKETS", 0, 45, {
-        align: "center"
-    });
+        // Dashed Cut Line
+        doc.moveTo(540, 20)
+            .lineTo(540, 300)
+            .dash(5, { space: 5 })
+            .stroke("#BDBDBD");
 
-// Tagline
-doc.font("Helvetica")
-    .fontSize(12)
-    .fillColor("#D1D5DB")
-    .text("YOUR EVENT. YOUR EXPERIENCE.", 0, 82, {
-        align: "center"
-    });
+        doc.undash();
 
-// White Divider
-doc.moveTo(150, 108)
-    .lineTo(350, 108)
-    .strokeColor("#FFFFFF")
-    .lineWidth(1)
-    .stroke();
+        // Cut Holes
+        doc.circle(540, 20, 12).fill("#F4F6FB");
+        doc.circle(540, 300, 12).fill("#F4F6FB");
 
+        const event = booking.eventId;
+
+        doc.fillColor("#111827")
+            .font("Helvetica-Bold")
+            .fontSize(34)
+            .text(event.title, 50, 42, {
+                width: 460
+            });
+
+        const date = new Date(event.date).toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "long",
+            year: "numeric"
+        });
+
+        // Divider
+        doc.moveTo(50, 122)
+            .lineTo(500, 122)
+            .strokeColor("#E5E7EB")
+            .lineWidth(1)
+            .stroke();
+        doc.roundedRect(50, 132, 90, 24, 12)
+            .fill("#EEF2FF");
+
+        doc.fillColor("#4F46E5")
+            .font("Helvetica-Bold")
+            .fontSize(10)
+            .text(
+                event.category.toUpperCase(),
+                50,
+                139,
+                {
+                    width: 90,
+                    align: "center"
+                }
+            );
+
+
+        doc.roundedRect(155, 132, 70, 24, 12)
+            .fill("#DCFCE7");
+
+        doc.fillColor("#166534")
+            .font("Helvetica-Bold")
+            .fontSize(10)
+            .text(
+                "₹" + event.ticketPrice,
+                155,
+                139,
+                {
+                    width: 70,
+                    align: "center"
+                }
+            );
+
+
+        doc.roundedRect(240, 132, 90, 24, 12)
+            .fill("#FEF3C7");
+
+        doc.fillColor("#B45309")
+            .font("Helvetica-Bold")
+            .fontSize(10)
+            .text(
+                "VERIFIED",
+                240,
+                139,
+                {
+                    width: 90,
+                    align: "center"
+                }
+            );
+
+        doc.font("Helvetica")
+            .fontSize(18)
+            .fillColor("#6B7280")
+            .text(date, 50, 90);
+
+
+
+        const user = booking.userId;
+
+        // Holder Card
+        doc.roundedRect(50, 175, 220, 70, 12)
+            .fill("#F8FAFC");
+
+        doc.fillColor("#6B7280")
+            .font("Helvetica")
+            .fontSize(10)
+            .text("TICKET HOLDER", 65, 188);
+
+        doc.fillColor("#111827")
+            .font("Helvetica-Bold")
+            .fontSize(16)
+            .text(user.name, 65, 208);
+
+        doc.font("Helvetica")
+            .fontSize(10)
+            .fillColor("#6B7280")
+            .text(user.email, 65, 228, {
+                width: 190
+            });
+
+
+        // Venue Card
+        doc.roundedRect(290, 175, 220, 70, 12)
+            .fill("#F8FAFC");
+
+        doc.fillColor("#6B7280")
+            .font("Helvetica")
+            .fontSize(10)
+            .text("VENUE", 305, 188);
+
+        doc.fillColor("#111827")
+            .font("Helvetica-Bold")
+            .fontSize(14)
+            .text(event.location, 305, 208, {
+                width: 190
+            });
+
+        const ticketNumber =
+            "ET-" +
+            new Date().getFullYear() +
+            "-" +
+            booking._id.toString().slice(-6).toUpperCase();
+
+        doc.fillColor("#6B7280")
+            .font("Helvetica")
+            .fontSize(10)
+            .text("TICKET NUMBER", 50, 262);
+
+        doc.fillColor("#4F46E5")
+            .font("Helvetica-Bold")
+            .fontSize(18)
+            .text(ticketNumber, 50, 278);
+        // EliteTickets
+        doc.fillColor("#FFFFFF")
+            .font("Helvetica-Bold")
+            .fontSize(18)
+            .text("ELITE", 570, 40, {
+                width: 100,
+                align: "center"
+            });
+
+        doc.fontSize(16)
+            .text("TICKETS", 570, 62, {
+                width: 100,
+                align: "center"
+            });
+
+        // VIP Badge
+        doc.roundedRect(570, 105, 100, 28, 14)
+            .fill("#FBBF24");
+
+        doc.fillColor("#111827")
+            .font("Helvetica-Bold")
+            .fontSize(12)
+            .text("VIP PASS", 570, 113, {
+                width: 100,
+                align: "center"
+            });
+        doc.fontSize(12)
+            .text("ELITETICKETS", 570, 95, {
+                width: 100,
+                align: "center"
+            });
+        const qrData = JSON.stringify({
+            ticket: ticketNumber,
+            booking: booking._id,
+            name: user.name,
+            event: event.title
+        });
+
+        const qr = await QRCode.toDataURL(qrData);
+
+        const qrImage = Buffer.from(
+            qr.replace(/^data:image\/png;base64,/, ""),
+            "base64"
+        );
+
+        doc.image(qrImage, 580, 155, {
+            width: 80
+        });
+
+        doc.fillColor("#FFFFFF")
+            .font("Helvetica")
+            .fontSize(9)
+            .text("SCAN TO ENTER", 570, 245, {
+                width: 100,
+                align: "center"
+            });
+        doc.fillColor("#9CA3AF")
+            .fontSize(8)
+            .text(ticketNumber, 565, 270, {
+                width: 110,
+                align: "center"
+            });
         doc.end();
+
+
     });
 };
 
