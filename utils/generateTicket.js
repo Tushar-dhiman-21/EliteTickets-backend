@@ -2,7 +2,15 @@ const PDFDocument = require("pdfkit");
 const QRCode = require("qrcode");
 
 const generateTicket = (booking) => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+  try {
+
+        if (!booking || !booking._id || !booking.eventId || !booking.userId) {
+            throw new Error("A booking with populated eventId and userId is required");
+        }
+
+        const event = booking.eventId;
+        const user = booking.userId;
 
         const doc = new PDFDocument({
             size: [720, 320],
@@ -17,6 +25,8 @@ const generateTicket = (booking) => {
             resolve(Buffer.concat(buffers));
         });
 
+        doc.on("error", reject);
+
         // Background
         doc.rect(0, 0, 720, 320)
             .fill("#F4F6FB");
@@ -28,7 +38,7 @@ const generateTicket = (booking) => {
 
         // Right VIP Section
         doc.rect(540, 20, 160, 280)
-            .fill("#111827");
+            .fill("#1E293B");
 
         // Dashed Cut Line
         doc.moveTo(540, 20)
@@ -42,9 +52,7 @@ const generateTicket = (booking) => {
         doc.circle(540, 20, 12).fill("#F4F6FB");
         doc.circle(540, 300, 12).fill("#F4F6FB");
 
-        const event = booking.eventId;
-
-        doc.fillColor("#111827")
+        doc.fillColor("#1E293B")
             .font("Helvetica-Bold")
             .fontSize(34)
             .text(event.title, 50, 42, {
@@ -56,6 +64,11 @@ const generateTicket = (booking) => {
             month: "long",
             year: "numeric"
         });
+
+        doc.fillColor("#6B7280")
+   .font("Helvetica")
+   .fontSize(18)
+   .text(date,50,90);
 
         // Divider
         doc.moveTo(50, 122)
@@ -113,25 +126,19 @@ const generateTicket = (booking) => {
                 }
             );
 
-        doc.font("Helvetica")
-            .fontSize(18)
-            .fillColor("#6B7280")
-            .text(date, 50, 90);
 
 
-
-        const user = booking.userId;
 
         // Holder Card
         doc.roundedRect(50, 175, 220, 70, 12)
-            .fill("#F8FAFC");
+            .fill("#F3F4F6");
 
         doc.fillColor("#6B7280")
             .font("Helvetica")
             .fontSize(10)
             .text("TICKET HOLDER", 65, 188);
 
-        doc.fillColor("#111827")
+        doc.fillColor("#1E293B")
             .font("Helvetica-Bold")
             .fontSize(16)
             .text(user.name, 65, 208);
@@ -146,14 +153,14 @@ const generateTicket = (booking) => {
 
         // Venue Card
         doc.roundedRect(290, 175, 220, 70, 12)
-            .fill("#F8FAFC");
+            .fill("#F3F4F6");
 
         doc.fillColor("#6B7280")
             .font("Helvetica")
             .fontSize(10)
             .text("VENUE", 305, 188);
 
-        doc.fillColor("#111827")
+        doc.fillColor("#1E293B")
             .font("Helvetica-Bold")
             .fontSize(14)
             .text(event.location, 305, 208, {
@@ -173,12 +180,12 @@ const generateTicket = (booking) => {
 
         doc.fillColor("#4F46E5")
             .font("Helvetica-Bold")
-            .fontSize(18)
+            .fontSize(16)
             .text(ticketNumber, 50, 278);
         // EliteTickets
         doc.fillColor("#FFFFFF")
             .font("Helvetica-Bold")
-            .fontSize(18)
+            .fontSize(16)
             .text("ELITE", 570, 40, {
                 width: 100,
                 align: "center"
@@ -194,18 +201,14 @@ const generateTicket = (booking) => {
         doc.roundedRect(570, 105, 100, 28, 14)
             .fill("#FBBF24");
 
-        doc.fillColor("#111827")
+        doc.fillColor("#1E293B")
             .font("Helvetica-Bold")
             .fontSize(12)
             .text("VIP PASS", 570, 113, {
                 width: 100,
                 align: "center"
             });
-        doc.fontSize(12)
-            .text("ELITETICKETS", 570, 95, {
-                width: 100,
-                align: "center"
-            });
+
         const qrData = JSON.stringify({
             ticket: ticketNumber,
             booking: booking._id,
@@ -220,9 +223,17 @@ const generateTicket = (booking) => {
             "base64"
         );
 
-        doc.image(qrImage, 580, 155, {
-            width: 80
-        });
+   doc.roundedRect(572,148,106,106,10)
+   .fill("#FFFFFF");
+
+doc.roundedRect(572,148,106,106,10)
+   .lineWidth(1)
+   .strokeColor("#E5E7EB")
+   .stroke();
+
+doc.image(qrImage,578,154,{
+    width:94
+});
 
         doc.fillColor("#FFFFFF")
             .font("Helvetica")
@@ -239,6 +250,10 @@ const generateTicket = (booking) => {
             });
         doc.end();
 
+
+    } catch (err) {
+        reject(err);
+    }
 
     });
 };

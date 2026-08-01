@@ -186,7 +186,7 @@ await OTP.create({
 })
 
 //sending email
-await sendOTPEmail(email,otp);
+            await sendOTPEmail(email, otp, "reset_password");
 
 return res.status(200).json({
     success:true,

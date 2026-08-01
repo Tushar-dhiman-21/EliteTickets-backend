@@ -7,7 +7,7 @@ router.post('/login', login);
 router.post('/verify-otp', verifyOTP);
 
 router.post('/forgot-password',forgotPassword);
-router.post('/reset-Password', resetPassword);
+router.post('/reset-password', resetPassword);
 
 
 

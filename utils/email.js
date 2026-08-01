@@ -22,11 +22,6 @@ const sendBookingEmail = async (booking) => {
 
         const pdfBuffer = await generateTicket(booking);
 
-require("fs").writeFileSync("/tmp/test.pdf", pdfBuffer);
-console.log("PDF written successfully");
-        console.log("Is Buffer:", Buffer.isBuffer(pdfBuffer));
-        console.log("PDF Size:", pdfBuffer.length);
-
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: userEmail,
@@ -54,10 +49,16 @@ console.log("PDF written successfully");
 };
 const sendOTPEmail = async (userEmail, otp, type) => {
     try {
-        const title = type === 'account_verification' ? 'Verify your EliteTickets Account' : 'EliteTickets Booking Verification';
+        const title = type === 'account_verification'
+            ? 'Verify your EliteTickets Account'
+            : type === 'reset_password'
+                ? 'Reset your EliteTickets Password'
+                : 'EliteTickets Booking Verification';
         const msg = type === 'account_verification'
             ? 'Please use the following OTP to verify your new EliteTickets account.'
-            : 'Please use the following OTP to verify and confirm your event booking.';
+            : type === 'reset_password'
+                ? 'Please use the following OTP to reset your EliteTickets password.'
+                : 'Please use the following OTP to verify and confirm your event booking.';
 
         const mailOptions = {
             from: process.env.EMAIL_USER,
