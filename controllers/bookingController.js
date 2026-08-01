@@ -37,13 +37,37 @@ exports.bookEvent = async (req, res) => {
             return res.status(400).json({ message: 'Already booked or pending' });
         }
 
-        const booking = await Booking.create({
-            userId: req.user.id,
-            eventId,
-            status: 'pending',
-            paymentStatus: 'not_paid',
-            amount: event.ticketPrice
-        });
+       let booking;
+
+if (event.ticketPrice === 0) {
+
+    booking = await Booking.create({
+        userId: req.user.id,
+        eventId,
+        status: "confirmed",
+        paymentStatus: "paid",
+        amount: 0
+    });
+
+    event.availableSeats -= 1;
+    await event.save();
+
+    await booking.populate("userId");
+    await booking.populate("eventId");
+
+    await sendBookingEmail(booking);
+
+} else {
+
+    booking = await Booking.create({
+        userId: req.user.id,
+        eventId,
+        status: "pending",
+        paymentStatus: "not_paid",
+        amount: event.ticketPrice
+    });
+
+}
 
         await OTP.deleteOne({ _id: validOTP._id }); // cleanup
 
@@ -52,7 +76,6 @@ exports.bookEvent = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
-
 exports.updateBookingStatus = async (req, res) => {
     try {
         const { status, paymentStatus } = req.body;
@@ -78,12 +101,14 @@ exports.updateBookingStatus = async (req, res) => {
             });
         }
 
-        // Restore seat if changing from confirmed
+
+        // Restore seat if confirmed booking is cancelled/rejected
         if (booking.status === "confirmed" && status !== "confirmed") {
             event.availableSeats += 1;
         }
 
-        // Confirm booking
+
+        // Deduct seat only when booking becomes confirmed first time
         if (booking.status !== "confirmed" && status === "confirmed") {
 
             if (event.availableSeats <= 0) {
@@ -95,35 +120,54 @@ exports.updateBookingStatus = async (req, res) => {
             event.availableSeats -= 1;
         }
 
-        // Update booking
+
+        // Update booking status
         booking.status = status;
 
+
+        // Update payment status if provided
         if (paymentStatus !== undefined) {
             booking.paymentStatus = paymentStatus;
         }
 
+
         await booking.save();
         await event.save();
 
-        // Send email AFTER saving the updated booking
-        if (booking.status === "confirmed" && booking.paymentStatus === "paid") {
-            console.log("Calling sendBookingEmail...");
+
+
+        // Send ticket only once after confirmed + paid
+        if (
+            booking.status === "confirmed" &&
+            booking.paymentStatus === "paid" &&
+            !booking.ticketSent
+        ) {
+
+            console.log("Sending booking email...");
+
             await sendBookingEmail(booking);
+
+            booking.ticketSent = true;
+            await booking.save();
         }
+
 
         res.json({
             message: "Booking updated successfully",
             booking
         });
 
+
     } catch (error) {
+
         console.error(error);
+
         res.status(500).json({
             message: "Server Error",
             error: error.message
         });
     }
-};  
+};
 exports.getMyBookings = async (req, res) => {
     try {
         const bookings = req.user.role === 'admin'

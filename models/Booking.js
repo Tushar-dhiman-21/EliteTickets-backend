@@ -30,7 +30,11 @@ paymentStatus: {
     required: true,
   },
 
-  // NEW
+    ticketSent: {
+    type: Boolean,
+    default: false
+},
+  
   transactionId: {
     type: String,
     default: "",
