@@ -100,7 +100,7 @@ const generateTicket = (booking) => {
             .font("Helvetica-Bold")
             .fontSize(10)
             .text(
-                "₹" + event.ticketPrice,
+                "Rs " + event.ticketPrice,
                 155,
                 139,
                 {
