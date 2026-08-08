@@ -31,23 +31,27 @@ const generateTicket = (booking) => {
             // Right Section
             doc.rect(540, 20, 160, 280).fill("#1E293B");
 
-            // Dashed Cut Line
-            doc.save()
-               .moveTo(540, 20)
+            // Dashed Cut Line (save/restore split out for clarity & safety)
+            doc.save();
+            doc.moveTo(540, 20)
                .lineTo(540, 300)
                .dash(5, { space: 5 })
-               .stroke("#BDBDBD")
-               .restore();
+               .stroke("#BDBDBD");
+            doc.restore();
 
             // Cut Holes
             doc.circle(540, 20, 12).fill("#F4F6FB");
             doc.circle(540, 300, 12).fill("#F4F6FB");
 
-            // Event Title
+            // Event Title (truncates instead of overflowing into the date/divider)
             doc.fillColor("#1E293B")
                .font("Helvetica-Bold")
                .fontSize(34)
-               .text(event.title || "Event Ticket", 50, 42, { width: 460 });
+               .text(event.title || "Event Ticket", 50, 42, {
+                   width: 460,
+                   height: 40,
+                   ellipsis: true
+               });
 
             // Date Format
             const dateStr = event.date ? new Date(event.date).toLocaleDateString("en-IN", {
@@ -88,12 +92,21 @@ const generateTicket = (booking) => {
                    align: "center"
                });
 
-            // Status Badge
-            doc.roundedRect(240, 132, 90, 24, 12).fill("#FEF3C7");
-            doc.fillColor("#B45309")
+            // Status Badge (now reflects actual booking status instead of a hardcoded value)
+            const rawStatus = (booking.status || "verified").toString().toUpperCase();
+            const statusColors = {
+                VERIFIED: { bg: "#FEF3C7", fg: "#B45309" },
+                CONFIRMED: { bg: "#DCFCE7", fg: "#166534" },
+                PENDING: { bg: "#FEE2E2", fg: "#991B1B" },
+                CANCELLED: { bg: "#FEE2E2", fg: "#991B1B" }
+            };
+            const statusStyle = statusColors[rawStatus] || statusColors.VERIFIED;
+
+            doc.roundedRect(240, 132, 90, 24, 12).fill(statusStyle.bg);
+            doc.fillColor(statusStyle.fg)
                .font("Helvetica-Bold")
                .fontSize(10)
-               .text("VERIFIED", 240, 139, {
+               .text(rawStatus, 240, 139, {
                    width: 90,
                    align: "center"
                });
@@ -101,13 +114,16 @@ const generateTicket = (booking) => {
             // Ticket Holder Card
             doc.roundedRect(50, 175, 220, 70, 12).fill("#F3F4F6");
             doc.fillColor("#6B7280").font("Helvetica").fontSize(10).text("TICKET HOLDER", 65, 188);
-            doc.fillColor("#1E293B").font("Helvetica-Bold").fontSize(16).text(user.name || "Guest", 65, 204);
-            doc.font("Helvetica").fontSize(10).fillColor("#6B7280").text(user.email || "", 65, 224, { width: 190 });
+            doc.fillColor("#1E293B").font("Helvetica-Bold").fontSize(16)
+               .text(user.name || "Guest", 65, 204, { width: 190, ellipsis: true });
+            doc.font("Helvetica").fontSize(10).fillColor("#6B7280")
+               .text(user.email || "", 65, 224, { width: 190, ellipsis: true });
 
             // Venue Card
             doc.roundedRect(290, 175, 220, 70, 12).fill("#F3F4F6");
             doc.fillColor("#6B7280").font("Helvetica").fontSize(10).text("VENUE", 305, 188);
-            doc.fillColor("#1E293B").font("Helvetica-Bold").fontSize(14).text(event.location || "N/A", 305, 208, { width: 190 });
+            doc.fillColor("#1E293B").font("Helvetica-Bold").fontSize(14)
+               .text(event.location || "N/A", 305, 208, { width: 190, height: 36, ellipsis: true });
 
             // Ticket Number
             const ticketNumber = "ET-" + new Date().getFullYear() + "-" + booking._id.toString().slice(-6).toUpperCase();
@@ -124,21 +140,21 @@ const generateTicket = (booking) => {
             doc.fillColor("#1E293B").font("Helvetica-Bold").fontSize(11).text("PASS", 570, 95, { width: 100, align: "center" });
 
             // QR Code Generation
+            // Only minimal identifiers are embedded (no name/email) since the QR
+            // is scannable by anyone who photographs the ticket. Full details
+            // should be looked up server-side using the ticket/booking id on scan.
             const qrData = JSON.stringify({
                 ticket: ticketNumber,
-                booking: booking._id,
-                name: user.name,
-                event: event.title
+                booking: booking._id
             });
 
-            const qrDataUrl = await QRCode.toDataURL(qrData);
-            const qrImage = Buffer.from(qrDataUrl.replace(/^data:image\/png;base64,/, ""), "base64");
+            const qrImage = await QRCode.toBuffer(qrData);
 
             // QR Container Box
             doc.roundedRect(572, 125, 96, 96, 8).fill("#FFFFFF");
             doc.image(qrImage, 576, 129, { width: 88 });
 
-            // Instructions below QR Code (Adjusted Y coordinates to avoid collision)
+            // Instructions below QR Code
             doc.fillColor("#FFFFFF").font("Helvetica").fontSize(8).text("SCAN TO ENTER", 565, 230, { width: 110, align: "center" });
             doc.fillColor("#9CA3AF").fontSize(8).text(ticketNumber, 565, 245, { width: 110, align: "center" });
 
